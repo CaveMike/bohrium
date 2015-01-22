@@ -45,7 +45,7 @@ class GenericAdapter(object):
 
     def update_all(self, request, body=None):
         logging.getLogger().error('not implemented')
-        return None
+        return ''
 
     def update_one(self, id, request, body):
         keys = self.cls.query_by_id(id)
