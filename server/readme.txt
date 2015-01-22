@@ -3,6 +3,28 @@ Pre-requisites:
   - Google Cloud Message API key.
   - (Optional) Create an app account for your Google App Engine admin account.
 
+Install:
+  - Python2.7
+  - nose: Python unit-test runner. https://nose.readthedocs.org/en/latest/
+  - nose-gae: nose plugin for GAE. https://github.com/sadovnychyi/NoseGAE
+
+Set-up:
+  - edit bin/env.sh to set the GAE_HOME variable to your installation.
+  - 'source bin/env.sh'
+  - 'cp src/app.yaml.example src/app.yaml'
+  - Edit src/app.yaml and set your AppEngine app name (search for 'xxx').
+  - 'cp cfg/deploy.py.example cfg/deploy.py'
+  - edit cfg/deploy.py.  Replace 'xxx' fields.
+  - 'bin/localrun.sh'   # Starts a local instance
+  - 'bin/fill.sh'       # Fills in the datastore with your GCM_API_KEY and sample data.
+  - The script, cfg/include.sh, defines a variable USE_LOCAL that aims scripts
+    and tools at either a local instance running on your machine or a remote
+    instance running on appspot.com.  By default it is set to local.
+
+Optional Set-up for tools and testing:
+  - cp cfg/testdata.py.example cfg/testdata.py
+  - Edit cfg/testdata.py.  Replace 'xxx' fields.
+
 Technologies, links, acronymns:
   GAE:
     Google AppEngine
@@ -240,8 +262,6 @@ delete:
   DELETE /subscription/<key>/
 delete all:
   DELETE /subscription/
-
-
 
 TODO:
   put objects in a hierarchy inside ndb.
