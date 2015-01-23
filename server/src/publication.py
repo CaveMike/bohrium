@@ -8,8 +8,10 @@ from google.appengine.ext import ndb
 
 from webapp2 import RequestHandler
 
+from codecHtml import CodecHtml
+from codecJson import CodecJson
 from contentRoute import ContentRoute
-from fields import *
+from fields import Fields
 from genericHandlers import GenericParentHandlerJson
 from genericHandlers import GenericHandlerJson
 from genericHandlers import GenericParentHandlerHtml
@@ -36,13 +38,11 @@ class Publication(ndb.Model):
     revision = ndb.IntegerProperty(default=0, required=True)
 
     @staticmethod
-    def load(obj, request=None, body=None):
-        logging.getLogger().debug('request=' + str(request) + ', body=' + str(body))
+    def load(obj, kv):
+        logging.getLogger().debug('kv=' + str(kv))
 
-        j = Fields.parse_json(body)
-
-        obj.topic = Fields.extract('topic', request, j, 'debug-topic')
-        obj.description = Fields.extract('description', request, j, 'debug-description')
+        obj.topic = Fields.get(kv, 'topic', 'debug-topic')
+        obj.description = Fields.get(kv, 'description', 'debug-description')
         obj.user_id = Fields.sanitize_user_id(users.get_current_user().user_id())
 
         logging.getLogger().debug('obj=' + str(obj))
@@ -52,70 +52,72 @@ class Publication(ndb.Model):
         return ( ndb.Key(urlsafe=id), )
 
     def get_id(self):
+        if not self.key.id():
+            return None
+
         return self.key.urlsafe()
 
-    @staticmethod
-    def url_name(prefix='', suffix=''):
-        return prefix + '/publication/' + suffix
-
-    def get_link(self):
-        return self.url_name() + self.get_id() + '/'
-
-    def redirect_url(self):
-        return '/publication/'
+    def get_link(self, includeId=True):
+        if includeId:
+            return '/publication/' + self.get_id() + '/'
+        else:
+            return '/publication/'
 
     @staticmethod
     def get_routes(base_url=''):
+        parent_url = str(base_url) + '/publication/'
+        child_url = str(parent_url) + '<id:' + Fields.REGEX_URLSAFE + '>/'
+
         return [ \
         # JSON (parent)
-        ContentRoute(template=Publication.url_name(base_url), handler=PublicationsHandlerJson,
+        ContentRoute(template=parent_url, handler=PublicationsHandlerJson,
             header='Accept', header_values=('application/json',),
             methods=('GET',)),
-        ContentRoute(template=Publication.url_name(base_url), handler=PublicationsHandlerJson,
+        ContentRoute(template=parent_url, handler=PublicationsHandlerJson,
             header='Content-Type', header_values=('application/json',),
             methods=('POST', 'PUT')),
-        ContentRoute(template=Publication.url_name(base_url), handler=PublicationsHandlerJson,
+        ContentRoute(template=parent_url, handler=PublicationsHandlerJson,
             methods=('DELETE')),
 
         # JSON (child)
-        ContentRoute(template=Publication.url_name(base_url, '<id:[a-zA-Z0-9\-]+>/'), handler=PublicationHandlerJson,
+        ContentRoute(template=child_url, handler=PublicationHandlerJson,
             header='Accept', header_values=('application/json',),
             methods=('GET',)),
-        ContentRoute(template=Publication.url_name(base_url, '<id:[a-zA-Z0-9\-]+>/'), handler=PublicationHandlerJson,
+        ContentRoute(template=child_url, handler=PublicationHandlerJson,
             header='Content-Type', header_values=('application/json',),
             methods=('POST', 'PUT')),
-        ContentRoute(template=Publication.url_name(base_url, '<id:[a-zA-Z0-9\-]+>/'), handler=PublicationHandlerJson,
+        ContentRoute(template=child_url, handler=PublicationHandlerJson,
             methods=('DELETE')),
 
         # HTML (parent)
-        ContentRoute(template=Publication.url_name(base_url), handler=PublicationsHandlerHtml,
+        ContentRoute(template=parent_url, handler=PublicationsHandlerHtml,
             header='Accept', header_values=('text/html',),
             methods=('GET',)),
-        ContentRoute(template=Publication.url_name(base_url), handler=PublicationsHandlerHtml,
+        ContentRoute(template=parent_url, handler=PublicationsHandlerHtml,
             #header='Content-Type', header_values=('application/x-www-form-urlencoded',),
             methods=('POST')),
 
         # HTML (child)
-        ContentRoute(template=Publication.url_name(base_url, '<id:[a-zA-Z0-9\-]+>/'), handler=PublicationHandlerHtml,
+        ContentRoute(template=child_url, handler=PublicationHandlerHtml,
             header='Accept', header_values=('text/html',),
             methods=('GET',)),
-        ContentRoute(template=Publication.url_name(base_url, '<id:[a-zA-Z0-9\-]+>/'), handler=PublicationHandlerHtml,
+        ContentRoute(template=child_url, handler=PublicationHandlerHtml,
             #header='Content-Type', header_values=('application/x-www-form-urlencoded',),
             methods=('POST',)),
         ]
 
 class PublicationsHandlerJson(GenericParentHandlerJson):
     def __init__(self, request, response):
-        super(PublicationsHandlerJson, self).__init__(request, response, GenericAdapter(Publication))
+        super(PublicationsHandlerJson, self).__init__(request, response, adapter=GenericAdapter(Publication), codec=CodecJson())
 
 class PublicationHandlerJson(GenericHandlerJson):
     def __init__(self, request, response):
-        super(PublicationHandlerJson, self).__init__(request, response, GenericAdapter(Publication))
+        super(PublicationHandlerJson, self).__init__(request, response, adapter=GenericAdapter(Publication), codec=CodecJson())
 
 class PublicationsHandlerHtml(GenericParentHandlerHtml):
     def __init__(self, request, response):
-        super(PublicationsHandlerHtml, self).__init__(request, response, GenericAdapter(Publication))
+        super(PublicationsHandlerHtml, self).__init__(request, response, adapter=GenericAdapter(Publication), codec=CodecHtml(Publication))
 
 class PublicationHandlerHtml(GenericHandlerHtml):
     def __init__(self, request, response):
-        super(PublicationHandlerHtml, self).__init__(request, response, GenericAdapter(Publication))
+        super(PublicationHandlerHtml, self).__init__(request, response, adapter=GenericAdapter(Publication), codec=CodecHtml(Publication))

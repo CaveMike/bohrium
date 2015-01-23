@@ -6,6 +6,12 @@ import re
 class Fields(object):
     USER_ID_SALT = 'tvpd$wo8'
 
+    REGEX_URLSAFE = '[a-zA-Z0-9_\-]+'
+    REGEX_USER_ID = '[a-f0-9]+'
+    REGEX_DEV_ID = '[a-f0-9]+'
+    REGEX_REG_ID = '[a-zA-Z0-9_\-]+'
+    REGEX_CONFIG_ID = '[a-zA-Z0-9_\-]+'
+
     @staticmethod
     def sanitize_user_id(value):
         value = value.strip()
@@ -28,8 +34,16 @@ class Fields(object):
         return result.group(0)
 
     @staticmethod
+    def validate_config_id(prop, value):
+        result = re.match('^\s*(' + Fields.REGEX_CONFIG_ID + ')\s*$', value, flags=re.IGNORECASE)
+        if not result:
+            raise TypeError('expected a config_id, got %s' % repr(value))
+
+        return result.group(0)
+
+    @staticmethod
     def validate_reg_id(prop, value):
-        result = re.match('^\s*([a-zA-Z0-9_\-]+)\s*$', value, flags=re.IGNORECASE)
+        result = re.match('^\s*(' + Fields.REGEX_REG_ID + ')\s*$', value, flags=re.IGNORECASE)
         if not result:
             raise TypeError('expected a reg_id, got %s' % repr(value))
 
@@ -37,39 +51,28 @@ class Fields(object):
 
     @staticmethod
     def validate_dev_id(prop, value):
-        result = re.match('^\s*([a-f0-9]+)\s*$', value, flags=re.IGNORECASE)
+        result = re.match('^\s*(' + Fields.REGEX_DEV_ID + ')\s*$', value, flags=re.IGNORECASE)
         if not result:
             raise TypeError('expected a dev_id, got %s' % repr(value))
 
         return result.group(0)
 
     @staticmethod
-    def parse_json(body):
-        j = None
+    def validate_user_id(prop, value):
+        result = re.match('^\s*(' + Fields.REGEX_USER_ID + ')\s*$', value, flags=re.IGNORECASE)
+        if not result:
+            raise TypeError('expected a user_id, got %s' % repr(value))
 
-        if body:
-            try:
-                j = json.loads(body)
-            except ValueError:
-                pass
-
-        logging.getLogger().debug('j=' + str(j) )
-        return j
+        return result.group(0)
 
     @staticmethod
-    def extract(field, request, j, default=None):
-        value = None
+    def get(kv, key, default=None):
+        try:
+            value = kv[key]
+        except KeyError:
+            value = None
 
-        if j:
-            try:
-                value = j[field]
-            except KeyError:
-                pass
-
-        if not value and request:
-            value = request.get(field)
-
-        if not value:
-            value = default
-
-        return value
+        if value:
+            return value
+        else:
+            return default

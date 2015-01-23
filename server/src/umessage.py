@@ -8,8 +8,10 @@ from google.appengine.ext import ndb
 
 from webapp2 import RequestHandler
 
+from codecHtml import CodecHtml
+from codecJson import CodecJson
 from contentRoute import ContentRoute
-from fields import *
+from fields import Fields
 from gcmHelpers import gcm
 from genericHandlers import GenericParentHandlerJson
 from genericHandlers import GenericHandlerJson
@@ -37,13 +39,11 @@ class UMessage(ndb.Model):
     revision = ndb.IntegerProperty(default=0, required=True)
 
     @staticmethod
-    def load(obj, request=None, body=None):
-        logging.getLogger().debug('request=' + str(request) + ', body=' + str(body))
+    def load(obj, kv):
+        logging.getLogger().debug('kv=' + str(kv))
 
-        j = Fields.parse_json(body)
-
-        obj.to_user_id = Fields.extract('to_user_id', request, j)
-        obj.message = Fields.extract('message', request, j, 'debug-message')
+        obj.to_user_id = Fields.get(kv, 'to_user_id')
+        obj.message = Fields.get(kv, 'message', 'debug-message')
         obj.user_id = Fields.sanitize_user_id(users.get_current_user().user_id())
 
         logging.getLogger().debug('obj=' + str(obj))
@@ -59,54 +59,56 @@ class UMessage(ndb.Model):
         return ( ndb.Key(urlsafe=id), )
 
     def get_id(self):
+        if not self.key.id():
+            return None
+
         return self.key.urlsafe()
 
-    @staticmethod
-    def url_name(prefix='', suffix=''):
-        return prefix + '/user/<user_id:[a-f0-9]+>/message/' + suffix
-
-    def get_link(self):
-        return '/user/' + str(self.user_id) + '/message/' + str(self.key.urlsafe()) + '/'
-
-    def redirect_url(self):
-        return '/user/' + str(self.user_id) + '/'
+    def get_link(self, includeId=True):
+        if includeId:
+            return '/user/' + str(self.user_id) + '/message/' + str(self.key.urlsafe()) + '/'
+        else:
+            return '/user/' + str(self.user_id) + '/'
 
     @staticmethod
     def get_routes(base_url=''):
+        parent_url = str(base_url) + '/user/<to_user_id:' + Fields.REGEX_USER_ID + '>/message/'
+        child_url = str(parent_url) + '/<id:' + Fields.REGEX_URLSAFE + '>/'
+
         return [ \
         # JSON (parent)
-        ContentRoute(template=UMessage.url_name(base_url), handler=UMessagesHandlerJson,
+        ContentRoute(template=parent_url, handler=UMessagesHandlerJson,
             header='Accept', header_values=('application/json',),
             methods=('GET',)),
-        ContentRoute(template=UMessage.url_name(base_url), handler=UMessagesHandlerJson,
+        ContentRoute(template=parent_url, handler=UMessagesHandlerJson,
             header='Content-Type', header_values=('application/json',),
             methods=('POST', 'PUT')),
-        ContentRoute(template=UMessage.url_name(base_url), handler=UMessagesHandlerJson,
+        ContentRoute(template=parent_url, handler=UMessagesHandlerJson,
             methods=('DELETE')),
 
         # JSON (child)
-        ContentRoute(template=UMessage.url_name(base_url, '<id:[a-zA-Z0-9\-]+>/'), handler=UMessageHandlerJson,
+        ContentRoute(template=child_url, handler=UMessageHandlerJson,
             header='Accept', header_values=('application/json',),
             methods=('GET',)),
-        ContentRoute(template=UMessage.url_name(base_url, '<id:[a-zA-Z0-9\-]+>/'), handler=UMessageHandlerJson,
+        ContentRoute(template=child_url, handler=UMessageHandlerJson,
             header='Content-Type', header_values=('application/json',),
             methods=('POST', 'PUT')),
-        ContentRoute(template=UMessage.url_name(base_url, '<id:[a-zA-Z0-9\-]+>/'), handler=UMessageHandlerJson,
+        ContentRoute(template=child_url, handler=UMessageHandlerJson,
             methods=('DELETE')),
 
         # HTML (parent)
-        ContentRoute(template=UMessage.url_name(base_url), handler=UMessagesHandlerHtml,
+        ContentRoute(template=parent_url, handler=UMessagesHandlerHtml,
             header='Accept', header_values=('text/html',),
             methods=('GET',)),
-        ContentRoute(template=UMessage.url_name(base_url), handler=UMessagesHandlerHtml,
+        ContentRoute(template=parent_url, handler=UMessagesHandlerHtml,
             #header='Content-Type', header_values=('application/x-www-form-urlencoded',),
             methods=('POST')),
 
         # HTML (child)
-        ContentRoute(template=UMessage.url_name(base_url, '<id:[a-zA-Z0-9\-]+>/'), handler=UMessageHandlerHtml,
+        ContentRoute(template=child_url, handler=UMessageHandlerHtml,
             header='Accept', header_values=('text/html',),
             methods=('GET',)),
-        ContentRoute(template=UMessage.url_name(base_url, '<id:[a-zA-Z0-9\-]+>/'), handler=UMessageHandlerHtml,
+        ContentRoute(template=child_url, handler=UMessageHandlerHtml,
             #header='Content-Type', header_values=('application/x-www-form-urlencoded',),
             methods=('POST',)),
         ]
@@ -121,16 +123,16 @@ class UMessageAdapter(GenericAdapter):
 
 class UMessagesHandlerJson(GenericParentHandlerJson):
     def __init__(self, request, response):
-        super(UMessagesHandlerJson, self).__init__(request, response, UMessageAdapter(UMessage))
+        super(UMessagesHandlerJson, self).__init__(request, response, adapter=UMessageAdapter(UMessage), codec=CodecJson())
 
 class UMessageHandlerJson(GenericHandlerJson):
     def __init__(self, request, response):
-        super(UMessageHandlerJson, self).__init__(request, response, UMessageAdapter(UMessage))
+        super(UMessageHandlerJson, self).__init__(request, response, adapter=UMessageAdapter(UMessage), codec=CodecJson())
 
 class UMessagesHandlerHtml(GenericParentHandlerHtml):
     def __init__(self, request, response):
-        super(UMessagesHandlerHtml, self).__init__(request, response, UMessageAdapter(UMessage))
+        super(UMessagesHandlerHtml, self).__init__(request, response, adapter=UMessageAdapter(UMessage), codec=CodecHtml(UMessage))
 
 class UMessageHandlerHtml(GenericHandlerHtml):
     def __init__(self, request, response):
-        super(UMessageHandlerHtml, self).__init__(request, response, UMessageAdapter(UMessage))
+        super(UMessageHandlerHtml, self).__init__(request, response, adapter=UMessageAdapter(UMessage), codec=CodecHtml(UMessage))

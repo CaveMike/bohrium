@@ -8,8 +8,10 @@ from google.appengine.ext import ndb
 
 from webapp2 import RequestHandler
 
+from codecHtml import CodecHtml
+from codecJson import CodecJson
 from contentRoute import ContentRoute
-from fields import *
+from fields import Fields
 from gcmHelpers import gcm
 from genericHandlers import GenericParentHandlerJson
 from genericHandlers import GenericHandlerJson
@@ -39,14 +41,12 @@ class PMessage(ndb.Model):
     revision = ndb.IntegerProperty(default=0, required=True)
 
     @staticmethod
-    def load(obj, request=None, body=None):
-        logging.getLogger().debug('request=' + str(request) + ', body=' + str(body))
-
-        j = Fields.parse_json(body)
+    def load(obj, kv):
+        logging.getLogger().debug('kv=' + str(kv))
 
         # Look up publication.
-        obj.pub_id = Fields.extract('pub_id', request, j)
-        obj.message = Fields.extract('message', request, j, 'debug-message')
+        obj.pub_id = Fields.get(kv, 'pub_id')
+        obj.message = Fields.get(kv, 'message', 'debug-message')
         obj.user_id = Fields.sanitize_user_id(users.get_current_user().user_id())
 
         logging.getLogger().debug('obj=' + str(obj))
@@ -77,54 +77,56 @@ class PMessage(ndb.Model):
         return ( ndb.Key(urlsafe=id), )
 
     def get_id(self):
+        if not self.key.id():
+            return None
+
         return self.key.urlsafe()
 
-    @staticmethod
-    def url_name(prefix='', suffix=''):
-        return prefix + '/publication/<pub_id:[a-zA-Z0-9\-]+>/message/' + suffix
-
-    def get_link(self):
-        return '/publication/' + str(self.pub_id) + '/message/' + str(self.key.urlsafe()) + '/'
-
-    def redirect_url(self):
-        return '/publication/' + str(self.pub_id) + '/'
+    def get_link(self, includeId=True):
+        if includeId:
+            return '/publication/' + str(self.pub_id) + '/message/' + str(self.key.urlsafe()) + '/'
+        else:
+            return '/publication/' + str(self.pub_id) + '/'
 
     @staticmethod
     def get_routes(base_url=''):
+        parent_url = str(base_url) + '/publication/<pub_id:' + Fields.REGEX_URLSAFE + '>/message/'
+        child_url = str(parent_url) + '/<id:' + Fields.REGEX_URLSAFE + '>/'
+
         return [ \
         # JSON (parent)
-        ContentRoute(template=PMessage.url_name(base_url), handler=PMessagesHandlerJson,
+        ContentRoute(template=parent_url, handler=PMessagesHandlerJson,
             header='Accept', header_values=('application/json',),
             methods=('GET',)),
-        ContentRoute(template=PMessage.url_name(base_url), handler=PMessagesHandlerJson,
+        ContentRoute(template=parent_url, handler=PMessagesHandlerJson,
             header='Content-Type', header_values=('application/json',),
             methods=('POST', 'PUT')),
-        ContentRoute(template=PMessage.url_name(base_url), handler=PMessagesHandlerJson,
+        ContentRoute(template=parent_url, handler=PMessagesHandlerJson,
             methods=('DELETE')),
 
         # JSON (child)
-        ContentRoute(template=PMessage.url_name(base_url, '<id:[a-zA-Z0-9\-]+>/'), handler=PMessageHandlerJson,
+        ContentRoute(template=child_url, handler=PMessageHandlerJson,
             header='Accept', header_values=('application/json',),
             methods=('GET',)),
-        ContentRoute(template=PMessage.url_name(base_url, '<id:[a-zA-Z0-9\-]+>/'), handler=PMessageHandlerJson,
+        ContentRoute(template=child_url, handler=PMessageHandlerJson,
             header='Content-Type', header_values=('application/json',),
             methods=('POST', 'PUT')),
-        ContentRoute(template=PMessage.url_name(base_url, '<id:[a-zA-Z0-9\-]+>/'), handler=PMessageHandlerJson,
+        ContentRoute(template=child_url, handler=PMessageHandlerJson,
             methods=('DELETE')),
 
         # HTML (parent)
-        ContentRoute(template=PMessage.url_name(base_url), handler=PMessagesHandlerHtml,
+        ContentRoute(template=parent_url, handler=PMessagesHandlerHtml,
             header='Accept', header_values=('text/html',),
             methods=('GET',)),
-        ContentRoute(template=PMessage.url_name(base_url), handler=PMessagesHandlerHtml,
+        ContentRoute(template=parent_url, handler=PMessagesHandlerHtml,
             #header='Content-Type', header_values=('application/x-www-form-urlencoded',),
             methods=('POST')),
 
         # HTML (child)
-        ContentRoute(template=PMessage.url_name(base_url, '<id:[a-zA-Z0-9\-]+>/'), handler=PMessageHandlerHtml,
+        ContentRoute(template=child_url, handler=PMessageHandlerHtml,
             header='Accept', header_values=('text/html',),
             methods=('GET',)),
-        ContentRoute(template=PMessage.url_name(base_url, '<id:[a-zA-Z0-9\-]+>/'), handler=PMessageHandlerHtml,
+        ContentRoute(template=child_url, handler=PMessageHandlerHtml,
             #header='Content-Type', header_values=('application/x-www-form-urlencoded',),
             methods=('POST',)),
         ]
@@ -139,16 +141,16 @@ class PMessageAdapter(GenericAdapter):
 
 class PMessagesHandlerJson(GenericParentHandlerJson):
     def __init__(self, request, response):
-        super(PMessagesHandlerJson, self).__init__(request, response, PMessageAdapter(PMessage))
+        super(PMessagesHandlerJson, self).__init__(request, response, adapter=PMessageAdapter(PMessage), codec=CodecJson())
 
 class PMessageHandlerJson(GenericHandlerJson):
     def __init__(self, request, response):
-        super(PMessageHandlerJson, self).__init__(request, response, PMessageAdapter(PMessage))
+        super(PMessageHandlerJson, self).__init__(request, response, adapter=PMessageAdapter(PMessage), codec=CodecJson())
 
 class PMessagesHandlerHtml(GenericParentHandlerHtml):
     def __init__(self, request, response):
-        super(PMessagesHandlerHtml, self).__init__(request, response, PMessageAdapter(PMessage))
+        super(PMessagesHandlerHtml, self).__init__(request, response, adapter=PMessageAdapter(PMessage), codec=CodecHtml(PMessage))
 
 class PMessageHandlerHtml(GenericHandlerHtml):
     def __init__(self, request, response):
-        super(PMessageHandlerHtml, self).__init__(request, response, PMessageAdapter(PMessage))
+        super(PMessageHandlerHtml, self).__init__(request, response, adapter=PMessageAdapter(PMessage), codec=CodecHtml(PMessage))

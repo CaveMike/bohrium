@@ -8,8 +8,10 @@ from google.appengine.ext import ndb
 
 from webapp2 import RequestHandler
 
+from codecHtml import CodecHtml
+from codecJson import CodecJson
 from contentRoute import ContentRoute
-from fields import *
+from fields import Fields
 from genericHandlers import GenericParentHandlerJson
 from genericHandlers import GenericHandlerJson
 from genericHandlers import GenericParentHandlerHtml
@@ -38,14 +40,12 @@ class User(ndb.Model):
     revision = ndb.IntegerProperty(default=0, required=True)
 
     @staticmethod
-    def load(obj, request=None, body=None):
-        logging.getLogger().debug('request=' + str(request) + ', body=' + str(body))
+    def load(obj, kv):
+        logging.getLogger().debug('kv=' + str(kv))
 
-        j = Fields.parse_json(body)
-
-        obj.name = Fields.extract('name', request, j, users.get_current_user().nickname())
-        obj.description = Fields.extract('description', request, j, 'debug-description')
-        obj.groups = Fields.extract('groups', request, j, 'debug-groups')
+        obj.name = Fields.get(kv, 'name', users.get_current_user().nickname())
+        obj.description = Fields.get(kv, 'description', 'debug-description')
+        obj.groups = Fields.get(kv, 'groups', 'debug-groups')
 
         obj.email = users.get_current_user().email()
         obj.user_id = Fields.sanitize_user_id(users.get_current_user().user_id())
@@ -59,68 +59,67 @@ class User(ndb.Model):
     def get_id(self):
         return self.user_id
 
-    @staticmethod
-    def url_name(prefix='', suffix=''):
-        return prefix + '/user/' + suffix
-
-    def get_link(self):
-        return self.url_name() + self.get_id() + '/'
-
-    def redirect_url(self):
-        return '/user/'
+    def get_link(self, includeId=True):
+        if includeId:
+            return '/user/' + self.get_id() + '/'
+        else:
+            return '/user/'
 
     @staticmethod
     def get_routes(base_url=''):
+        parent_url = str(base_url) + '/user/'
+        child_url = str(parent_url) + '<id:' + Fields.REGEX_USER_ID + '>/'
+
         return [ \
         # JSON (parent)
-        ContentRoute(template=User.url_name(base_url), handler=UsersHandlerJson,
+        ContentRoute(template=parent_url, handler=UsersHandlerJson,
             header='Accept', header_values=('application/json',),
             methods=('GET',)),
-        ContentRoute(template=User.url_name(base_url), handler=UsersHandlerJson,
+        ContentRoute(template=parent_url, handler=UsersHandlerJson,
             header='Content-Type', header_values=('application/json',),
             methods=('POST', 'PUT')),
-        ContentRoute(template=User.url_name(base_url), handler=UsersHandlerJson,
+        ContentRoute(template=parent_url, handler=UsersHandlerJson,
             methods=('DELETE')),
 
         # JSON (child)
-        ContentRoute(template=User.url_name(base_url, '<id:[a-f0-9]+>/'), handler=UserHandlerJson,
+        ContentRoute(template=child_url, handler=UserHandlerJson,
             header='Accept', header_values=('application/json',),
             methods=('GET',)),
-        ContentRoute(template=User.url_name(base_url, '<id:[a-f0-9]+>/'), handler=UserHandlerJson,
+        ContentRoute(template=child_url, handler=UserHandlerJson,
             header='Content-Type', header_values=('application/json',),
             methods=('POST', 'PUT')),
-        ContentRoute(template=User.url_name(base_url, '<id:[a-f0-9]+>/'), handler=UserHandlerJson,
+        ContentRoute(template=child_url, handler=UserHandlerJson,
             methods=('DELETE')),
 
         # HTML (parent)
-        ContentRoute(template=User.url_name(base_url), handler=UsersHandlerHtml,
+        ContentRoute(template=parent_url, handler=UsersHandlerHtml,
             header='Accept', header_values=('text/html',),
             methods=('GET',)),
-        ContentRoute(template=User.url_name(base_url), handler=UsersHandlerHtml,
+        ContentRoute(template=parent_url, handler=UsersHandlerHtml,
             #header='Content-Type', header_values=('application/x-www-form-urlencoded',),
             methods=('POST')),
 
         # HTML (child)
-        ContentRoute(template=User.url_name(base_url, '<id:[a-f0-9]+>/'), handler=UserHandlerHtml,
+        ContentRoute(template=child_url, handler=UserHandlerHtml,
             header='Accept', header_values=('text/html',),
             methods=('GET',)),
-        ContentRoute(template=User.url_name(base_url, '<id:[a-f0-9]+>/'), handler=UserHandlerHtml,
+        ContentRoute(template=child_url, handler=UserHandlerHtml,
             #header='Content-Type', header_values=('application/x-www-form-urlencoded',),
             methods=('POST',)),
         ]
 
 class UsersHandlerJson(GenericParentHandlerJson):
     def __init__(self, request, response):
-        super(UsersHandlerJson, self).__init__(request, response, GenericAdapter(User))
+        super(UsersHandlerJson, self).__init__(request, response, adapter=GenericAdapter(User), codec=CodecJson())
 
 class UserHandlerJson(GenericHandlerJson):
     def __init__(self, request, response):
-        super(UserHandlerJson, self).__init__(request, response, GenericAdapter(User))
+        super(UserHandlerJson, self).__init__(request, response, adapter=GenericAdapter(User), codec=CodecJson())
 
 class UsersHandlerHtml(GenericParentHandlerHtml):
     def __init__(self, request, response):
-        super(UsersHandlerHtml, self).__init__(request, response, GenericAdapter(User))
+        super(UsersHandlerHtml, self).__init__(request, response, adapter=GenericAdapter(User), codec=CodecHtml(User))
 
 class UserHandlerHtml(GenericHandlerHtml):
     def __init__(self, request, response):
-        super(UserHandlerHtml, self).__init__(request, response, GenericAdapter(User))
+        super(UserHandlerHtml, self).__init__(request, response, adapter=GenericAdapter(User), codec=CodecHtml(User))

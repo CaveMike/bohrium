@@ -5,11 +5,11 @@
         <th>{{ key }}</th>
         {% endfor %}
     </tr>
-    {% for result in results %}
+    {% for r in result %}
     <tr>
-        <td><a href="{{ result.get_link() }}">link</a></td>
+        <td><a href="{{ r.get_link() }}">link</a></td>
         {% for key in keys %}
-        <td>{{ result[key] }}</td>
+        <td>{{ r[key] }}</td>
         {% endfor %}
     </tr>
     {% endfor %}

@@ -8,8 +8,10 @@ from google.appengine.ext import ndb
 
 from webapp2 import RequestHandler
 
+from codecHtml import CodecHtml
+from codecJson import CodecJson
 from contentRoute import ContentRoute
-from fields import *
+from fields import Fields
 from genericHandlers import GenericParentHandlerJson
 from genericHandlers import GenericHandlerJson
 from genericHandlers import GenericParentHandlerHtml
@@ -36,13 +38,11 @@ class Config(ndb.Model):
     revision = ndb.IntegerProperty(default=0, required=True)
 
     @staticmethod
-    def load(obj, request=None, body=None):
-        logging.getLogger().debug('request=' + str(request) + ', body=' + str(body))
+    def load(obj, kv):
+        logging.getLogger().debug('kv=' + str(kv))
 
-        j = Fields.parse_json(body)
-
-        obj.name = Fields.extract('name', request, j)
-        obj.gcm_api_key = Fields.extract('gcm_api_key', request, j)
+        obj.name = Fields.get(kv, 'name', 'default')
+        obj.gcm_api_key = Fields.get(kv, 'gcm_api_key')
         obj.user_id = Fields.sanitize_user_id(users.get_current_user().user_id())
 
         logging.getLogger().debug('obj=' + str(obj))
@@ -54,15 +54,11 @@ class Config(ndb.Model):
     def get_id(self):
         return self.name
 
-    @staticmethod
-    def url_name(prefix='', suffix=''):
-        return prefix + '/config/' + suffix
-
-    def get_link(self):
-        return self.url_name() + self.get_id() + '/'
-
-    def redirect_url(self):
-        return '/config/'
+    def get_link(self, includeId=True):
+        if includeId:
+            return '/config/' + self.get_id() + '/'
+        else:
+            return '/config/'
 
     @classmethod
     def get_master_db(cls, id='active'):
@@ -84,59 +80,62 @@ class Config(ndb.Model):
 
     @staticmethod
     def get_routes(base_url=''):
+        parent_url = str(base_url) + '/config/'
+        child_url = str(parent_url) + '<id:' + Fields.REGEX_CONFIG_ID + '>/'
+
         return [ \
         # JSON (parent)
-        ContentRoute(template=Config.url_name(base_url), handler=ConfigsHandlerJson,
+        ContentRoute(template=parent_url, handler=ConfigsHandlerJson,
             header='Accept', header_values=('application/json',),
             methods=('GET',)),
-        ContentRoute(template=Config.url_name(base_url), handler=ConfigsHandlerJson,
+        ContentRoute(template=parent_url, handler=ConfigsHandlerJson,
             header='Content-Type', header_values=('application/json',),
             methods=('POST', 'PUT')),
-        ContentRoute(template=Config.url_name(base_url), handler=ConfigsHandlerJson,
+        ContentRoute(template=parent_url, handler=ConfigsHandlerJson,
             methods=('DELETE')),
 
         # JSON (child)
-        ContentRoute(template=Config.url_name(base_url, '<id:[a-zA-Z0-9\-]+>/'), handler=ConfigHandlerJson,
+        ContentRoute(template=child_url, handler=ConfigHandlerJson,
             header='Accept', header_values=('application/json',),
             methods=('GET',)),
-        ContentRoute(template=Config.url_name(base_url, '<id:[a-zA-Z0-9\-]+>/'), handler=ConfigHandlerJson,
+        ContentRoute(template=child_url, handler=ConfigHandlerJson,
             header='Content-Type', header_values=('application/json',),
             methods=('POST', 'PUT')),
-        ContentRoute(template=Config.url_name(base_url, '<id:[a-zA-Z0-9\-]+>/'), handler=ConfigHandlerJson,
+        ContentRoute(template=child_url, handler=ConfigHandlerJson,
             methods=('DELETE')),
 
         # HTML (parent)
-        ContentRoute(template=Config.url_name(base_url), handler=ConfigsHandlerHtml,
+        ContentRoute(template=parent_url, handler=ConfigsHandlerHtml,
             header='Accept', header_values=('text/html',),
             methods=('GET',)),
-        ContentRoute(template=Config.url_name(base_url), handler=ConfigsHandlerHtml,
+        ContentRoute(template=parent_url, handler=ConfigsHandlerHtml,
             #header='Content-Type', header_values=('application/x-www-form-urlencoded',),
             methods=('POST')),
 
         # HTML (child)
-        ContentRoute(template=Config.url_name(base_url, '<id:[a-zA-Z0-9\-]+>/'), handler=ConfigHandlerHtml,
+        ContentRoute(template=child_url, handler=ConfigHandlerHtml,
             header='Accept', header_values=('text/html',),
             methods=('GET',)),
-        ContentRoute(template=Config.url_name(base_url, '<id:[a-zA-Z0-9\-]+>/'), handler=ConfigHandlerHtml,
+        ContentRoute(template=child_url, handler=ConfigHandlerHtml,
             #header='Content-Type', header_values=('application/x-www-form-urlencoded',),
             methods=('POST',)),
         ]
 
 class ConfigsHandlerJson(GenericParentHandlerJson):
     def __init__(self, request, response):
-        super(ConfigsHandlerJson, self).__init__(request, response, GenericAdapter(Config))
+        super(ConfigsHandlerJson, self).__init__(request, response, adapter=GenericAdapter(Config), codec=CodecJson())
 
 class ConfigHandlerJson(GenericHandlerJson):
     def __init__(self, request, response):
-        super(ConfigHandlerJson, self).__init__(request, response, GenericAdapter(Config))
+        super(ConfigHandlerJson, self).__init__(request, response, adapter=GenericAdapter(Config), codec=CodecJson())
 
 class ConfigsHandlerHtml(GenericParentHandlerHtml):
     def __init__(self, request, response):
-        super(ConfigsHandlerHtml, self).__init__(request, response, GenericAdapter(Config))
+        super(ConfigsHandlerHtml, self).__init__(request, response, adapter=GenericAdapter(Config), codec=CodecHtml(Config))
 
 class ConfigHandlerHtml(GenericHandlerHtml):
     def __init__(self, request, response):
-        super(ConfigHandlerHtml, self).__init__(request, response, GenericAdapter(Config))
+        super(ConfigHandlerHtml, self).__init__(request, response, adapter=GenericAdapter(Config), codec=CodecHtml(Config))
 
 
 Config.get_master_db()

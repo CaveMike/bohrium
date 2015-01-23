@@ -1,16 +1,12 @@
-import jinja
-import json
 import logging
 
 from webapp2 import RequestHandler
 
-from ndbjsonencoder import NdbJsonEncoder
-
 class GenericParentHandlerJson(RequestHandler):
-    def __init__(self, request, response, adapter):
+    def __init__(self, request, response, adapter, codec):
         super(GenericParentHandlerJson, self).__init__(request, response)
         self.adapter = adapter
-        logging.getLogger().debug('adapter=' + str(type(self.adapter)))
+        self.codec = codec
 
     # Create child
     def post(self, *args, **kwargs):
@@ -19,60 +15,65 @@ class GenericParentHandlerJson(RequestHandler):
         if not self.request.body:
             self.abort(400)
 
-        obj = self.adapter.create(self.request, self.request.body)
+        kv = self.codec.decode(self.request)
+        if not kv:
+            self.abort(500, detail='Decoding error')
+
+        obj = self.adapter.create(kv=kv)
         if not obj:
             self.abort(500, detail='Create error')
 
-        result = json.dumps(obj=obj, cls=NdbJsonEncoder)
+        result = self.codec.encode(self.request, obj)
         if not result:
             self.abort(500, detail='Encoding error')
 
-        self.response.headers['Content-Type'] = 'application/json'
+        self.response.headers['Content-Type'] = self.codec.content_type
         self.response.write(result)
 
     # Read all
     def get(self, *args, **kwargs):
         logging.getLogger().debug('get: args: %s, kwargs: %s' % (args, kwargs))
 
-        objs = self.adapter.read_all(self.request, self.request.body)
+        objs = self.adapter.read_all()
         if not objs:
             self.abort(500, detail='Read error')
 
-        result = json.dumps(obj=objs, cls=NdbJsonEncoder)
+        result = self.codec.encode(self.request, objs)
         if not result:
             self.abort(500, detail='Encoding error')
 
-        self.response.headers['Content-Type'] = 'application/json'
+        self.response.headers['Content-Type'] = self.codec.content_type
         self.response.write(result)
 
     # Update all
     def put(self, *args, **kwargs):
         logging.getLogger().debug('put: args: %s, kwargs: %s' % (args, kwargs))
 
-        objs = self.adapter.update_all(self.request, self.request.body)
+        objs = self.adapter.update_all()
         if not objs:
             self.abort(500, detail='Update error')
 
-        result = json.dumps(obj=objs, cls=NdbJsonEncoder)
+        result = self.codec.encode(self.request, objs)
         if not result:
             self.abort(500, detail='Encoding error')
 
-        self.response.headers['Content-Type'] = 'application/json'
+        self.response.headers['Content-Type'] = self.codec.content_type
         self.response.write(result)
 
     # Delete all
     def delete(self, *args, **kwargs):
         logging.getLogger().debug('delete: args: %s, kwargs: %s' % (args, kwargs))
 
-        self.adapter.delete_all(self.request, self.request.body)
+        self.adapter.delete_all()
 
-        self.response.headers['Content-Type'] = 'application/json'
+        self.response.headers['Content-Type'] = self.codec.content_type
         self.response.write('')
 
 class GenericHandlerJson(RequestHandler):
-    def __init__(self, request, response, adapter):
+    def __init__(self, request, response, adapter, codec):
         super(GenericHandlerJson, self).__init__(request, response)
         self.adapter = adapter
+        self.codec = codec
 
     @staticmethod
     def get_id(kwargs, request):
@@ -103,11 +104,11 @@ class GenericHandlerJson(RequestHandler):
         if not obj:
             self.abort(404)
 
-        result = json.dumps(obj=obj, cls=NdbJsonEncoder)
+        result = self.codec.encode(self.request, obj)
         if not result:
             self.abort(500, detail='Encoding error')
 
-        self.response.headers['Content-Type'] = 'application/json'
+        self.response.headers['Content-Type'] = self.codec.content_type
         self.response.write(result)
 
     # Read one
@@ -115,15 +116,15 @@ class GenericHandlerJson(RequestHandler):
         logging.getLogger().debug('get: args: %s, kwargs: %s' % (args, kwargs))
 
         id = self.get_id(kwargs, self.request)
-        obj = self.adapter.read_one(id, self.request, self.request.body)
+        obj = self.adapter.read_one(id)
         if not obj:
             self.abort(404)
 
-        result = json.dumps(obj=obj, cls=NdbJsonEncoder)
+        result = self.codec.encode(self.request, obj)
         if not result:
             self.abort(500, detail='Encoding error')
 
-        self.response.headers['Content-Type'] = 'application/json'
+        self.response.headers['Content-Type'] = self.codec.content_type
         self.response.write(result)
 
     # Update one
@@ -131,15 +132,20 @@ class GenericHandlerJson(RequestHandler):
         logging.getLogger().debug('put: args: %s, kwargs: %s' % (args, kwargs))
 
         id = self.get_id(kwargs, self.request)
-        obj = self.adapter.update_one(id, self.request, self.request.body)
+
+        kv = self.codec.decode(self.request)
+        if not kv:
+            self.abort(500, detail='Decoding error')
+
+        obj = self.adapter.update_one(id, kv=kv)
         if not obj:
             self.abort(404)
 
-        result = json.dumps(obj=obj, cls=NdbJsonEncoder)
+        result = self.codec.encode(self.request, obj)
         if not result:
             self.abort(500, detail='Encoding error')
 
-        self.response.headers['Content-Type'] = 'application/json'
+        self.response.headers['Content-Type'] = self.codec.content_type
         self.response.write(result)
 
     # Delete one
@@ -147,35 +153,22 @@ class GenericHandlerJson(RequestHandler):
         logging.getLogger().debug('delete: args: %s, kwargs: %s' % (args, kwargs))
 
         id = self.get_id(kwargs, self.request)
-        obj = self.adapter.delete_one(id, self.request, self.request.body)
+        obj = self.adapter.delete_one(id)
         if not obj:
             self.abort(404)
 
-        result = json.dumps(obj=obj, cls=NdbJsonEncoder)
+        result = self.codec.encode(self.request, obj)
         if not result:
             self.abort(500, detail='Encoding error')
 
-        self.response.headers['Content-Type'] = 'application/json'
+        self.response.headers['Content-Type'] = self.codec.content_type
         self.response.write(result)
 
 class GenericParentHandlerHtml(RequestHandler):
-    def __init__(self, request, response, adapter):
+    def __init__(self, request, response, adapter, codec):
         super(GenericParentHandlerHtml, self).__init__(request, response)
         self.adapter = adapter
-
-    # List all
-    def get(self, *args, **kwargs):
-        logging.getLogger().debug('get: args: %s, kwargs: %s' % (args, kwargs))
-
-        template_values = self.adapter.parse_template_values(self.request)
-        template_values['results'] = self.adapter.read_all(self.request)
-
-        template = jinja.get_template('html/all.html')
-
-        result = template.render(template_values)
-
-        self.response.headers['Content-Type'] = 'text/html'
-        self.response.write(result)
+        self.codec = codec
 
     def post(self, *args, **kwargs):
         logging.getLogger().debug('post: args: %s, kwargs: %s' % (args, kwargs))
@@ -186,32 +179,52 @@ class GenericParentHandlerHtml(RequestHandler):
         else:
             self._post(*args, **kwargs)
 
-    # Create child
+    # Create
     def _post(self, *args, **kwargs):
         logging.getLogger().debug('_post: args: %s, kwargs: %s' % (args, kwargs))
 
         if not self.request.body:
             self.abort(400)
 
-        obj = self.adapter.create(self.request, body=None)
-        if obj:
-            self.redirect(obj.redirect_url())
+        kv = self.codec.decode(self.request)
+        if not kv:
+            self.abort(500, 'Decode error')
 
-        self.response.headers['Content-Type'] = 'text/html'
-        self.response.write('error, not created')
+        kv.update(kwargs)
+
+        obj = self.adapter.create(kv=kv)
+        if not obj:
+            self.abort(500, detail='Create error')
+
+        self.redirect(self.codec.redirect_url())
+
+    # Read all
+    def get(self, *args, **kwargs):
+        logging.getLogger().debug('get: args: %s, kwargs: %s' % (args, kwargs))
+
+        objs = self.adapter.read_all()
+        # objs may be None
+
+        results = self.codec.encode(self.request, objs, 'html/all.html')
+        if not results:
+            self.abort(500, detail='Encoding error')
+
+        self.response.headers['Content-Type'] = self.codec.content_type
+        self.response.write(results)
 
     # Delete all
     def delete(self, *args, **kwargs):
         logging.getLogger().debug('delete: args: %s, kwargs: %s' % (args, kwargs))
 
-        result = self.adapter.delete_all(self.request)
+        self.adapter.delete_all()
 
-        self.redirect(self.adapter.redirect_url())
+        self.redirect(self.codec.redirect_url())
 
 class GenericHandlerHtml(RequestHandler):
-    def __init__(self, request, response, adapter):
+    def __init__(self, request, response, adapter, codec):
         super(GenericHandlerHtml, self).__init__(request, response)
         self.adapter = adapter
+        self.codec = codec
 
     @staticmethod
     def get_id(kwargs, request):
@@ -230,21 +243,6 @@ class GenericHandlerHtml(RequestHandler):
 
         self.abort(501)
 
-    # List one
-    def get(self, *args, **kwargs):
-        logging.getLogger().debug('get: args: %s, kwargs: %s' % (args, kwargs))
-
-        id = self.get_id(kwargs, self.request)
-
-        template_values = self.adapter.parse_template_values(self.request)
-        template_values['result'] = self.adapter.read_one(id, self.request)
-
-        template = jinja.get_template('html/one.html')
-
-        result = template.render(template_values)
-
-        self.response.write(result)
-
     def post(self, *args, **kwargs):
         logging.getLogger().debug('post: args: %s, kwargs: %s' % (args, kwargs))
 
@@ -254,6 +252,23 @@ class GenericHandlerHtml(RequestHandler):
         else:
             self._post(*args, **kwargs)
 
+    # Read one
+    def get(self, *args, **kwargs):
+        logging.getLogger().debug('get: args: %s, kwargs: %s' % (args, kwargs))
+
+        id = self.get_id(kwargs, self.request)
+
+        obj = self.adapter.read_one(id)
+        if not obj:
+            self.abort(404)
+
+        results = self.codec.encode(self.request, obj, 'html/one.html')
+        if not results:
+            self.abort(500, detail='Encoding error')
+
+        self.response.headers['Content-Type'] = self.codec.content_type
+        self.response.write(results)
+
     # Update one
     def _post(self, *args, **kwargs):
         logging.getLogger().debug('_post: args: %s, kwargs: %s' % (args, kwargs))
@@ -262,15 +277,27 @@ class GenericHandlerHtml(RequestHandler):
             self.abort(400)
 
         id = self.get_id(kwargs, self.request)
-        result = self.adapter.update_one(id, self.request, body=None)
 
-        self.redirect(self.adapter.redirect_url())
+        kv = self.codec.decode(self.request)
+        if not kv:
+            self.abort(500, 'Decode error')
+
+        kv.update(kwargs)
+
+        obj = self.adapter.update_one(id, kv=kv)
+        if not obj:
+            self.abort(500, 'Update error')
+
+        self.redirect(self.codec.redirect_url())
 
     # Delete one
     def delete(self, *args, **kwargs):
         logging.getLogger().debug('delete: args: %s, kwargs: %s' % (args, kwargs))
 
         id = self.get_id(kwargs, self.request)
-        result = self.adapter.delete_one(id, self.request)
 
-        self.redirect(self.adapter.redirect_url())
+        obj = self.adapter.delete_one(id)
+        if not obj:
+            self.abort(404)
+
+        self.redirect(self.codec.redirect_url())

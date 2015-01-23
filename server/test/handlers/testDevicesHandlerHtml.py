@@ -2,11 +2,13 @@ import webapp2
 import webtest
 import unittest2 as unittest
 
+from google.appengine.api import users
 from google.appengine.ext import testbed
 
 from deploy import Deploy
 from device import Device
 from device import DevicesHandlerHtml
+from fields import Fields
 from helpers import setCurrentUser
 from testdata import TestData
 
@@ -15,8 +17,6 @@ class DevicesHandlerHtmlTest(unittest.TestCase):
         # Create a WSGI application.
         app = webapp2.WSGIApplication(Device.get_routes(), debug=True)
 
-        setCurrentUser(email=Deploy.GAE_ADMIN, user_id='1234', is_admin=True)
-
         # Wrap the app with WebTest's TestApp.
         self.testapp = webtest.TestApp(app)
         self.testbed = testbed.Testbed()
@@ -24,8 +24,11 @@ class DevicesHandlerHtmlTest(unittest.TestCase):
         self.testbed.init_datastore_v3_stub()
         self.testbed.init_user_stub()
 
+        setCurrentUser(email=Deploy.GAE_ADMIN, user_id='1234', is_admin=True)
+        user_id=Fields.sanitize_user_id(users.get_current_user().user_id())
+
         test = TestData.TEST_DEVICES[0]
-        self.device = Device(parent=Device.ROOT_KEY, name=test['name'], reg_id=test['reg_id'], dev_id=test['dev_id'], resource=test['resource'], type=test['type'])
+        self.device = Device(parent=Device.ROOT_KEY, user_id=user_id, name=test['name'], reg_id=test['reg_id'], dev_id=test['dev_id'], resource=test['resource'], type=test['type'])
         self.key = self.device.put()
 
     def tearDown(self):
