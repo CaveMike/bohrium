@@ -68,7 +68,7 @@ class Config(ndb.Model):
     def get_master_db(cls, id='active'):
         keys = cls.query_by_id(id)
         if not keys:
-            logging.getLogger().error('no objects found')
+            logging.getLogger().warn('no objects found')
             return None
 
         if len(keys) > 1:

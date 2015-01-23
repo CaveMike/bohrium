@@ -39,7 +39,6 @@ class LocalServer(Server):
         data = urllib.urlencode(values)
 
         url = self.ROOT_URL + '/_ah/login'+ '?' + data
-        print 'url', url
 
         response = self.session.get(url=url)
 
@@ -47,7 +46,7 @@ class RemoteServer(Server):
     def setUp(self):
         self.session = requests.session()
         self.authtoken = self.getAuthToken()
-        print('authtoken', str(self.authtoken))
+        #print('authtoken', str(self.authtoken))
         self.getAuthCookie()
 
     def tearDown(self):
@@ -55,7 +54,7 @@ class RemoteServer(Server):
 
     def getAuthToken(self):
         AUTH_URI = 'https://www.google.com/accounts/ClientLogin'
-        print('AUTH_URI', str(AUTH_URI))
+        #print('AUTH_URI', str(AUTH_URI))
 
         """
          We use a cookie to authenticate with Google App Engine
@@ -72,7 +71,7 @@ class RemoteServer(Server):
                                           "service": "ah",
                                           "source":  Deploy.GAE_NAME,
                                           "accountType": Deploy.GAE_ACCOUNT_TYPE })
-        print('authreq_data', str(authreq_data))
+        #print('authreq_data', str(authreq_data))
 
         auth_req = urllib2.Request(AUTH_URI, data=authreq_data)
         auth_resp = urllib2.urlopen(auth_req)
@@ -82,7 +81,7 @@ class RemoteServer(Server):
         auth_resp_dict = dict(x.split('=') for x in auth_resp_body.split('\n') if x)
 
         authtoken = auth_resp_dict['Auth']
-        print('authtoken', str(authtoken))
+        #print('authtoken', str(authtoken))
         return authtoken
 
     def getAuthCookie(self):
@@ -95,9 +94,6 @@ class RemoteServer(Server):
         }
 
         response = self.session.post(url=self.ROOT_URL + '/_ah/login', headers=headers, params=params, allow_redirects=False)
-        print 'rsp', response
-        print 'headers', response.headers
-        print 'body', response.text
         self.assertEqual(response.status_code, 302)
 
 class ServerHtmlTests(object):
@@ -145,7 +141,6 @@ class ServerJsonTests(object):
         }
 
         data = json.dumps(obj=values)
-        print 'data', data
 
         TARGET_URL = self.ROOT_URL + '/device/' + values['dev_id'] + '/'
 
@@ -166,7 +161,6 @@ class ServerJsonTests(object):
         }
 
         data = json.dumps(obj=values)
-        print 'data', data
 
         TARGET_URL = self.ROOT_URL + '/device/'
 

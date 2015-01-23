@@ -5,6 +5,7 @@ import webtest
 import unittest2 as unittest
 
 from google.appengine.api import users
+from google.appengine.ext import ndb
 from google.appengine.ext import testbed
 
 from ndbjsonencoder import NdbJsonEncoder
@@ -20,13 +21,13 @@ class DevicesHandlerJsonTest(unittest.TestCase):
         # Create a WSGI application.
         app = webapp2.WSGIApplication([('/', DevicesHandlerJson)])
 
-
         # Wrap the app with WebTest's TestApp.
         self.testapp = webtest.TestApp(app)
         self.testbed = testbed.Testbed()
         self.testbed.activate()
         self.testbed.init_datastore_v3_stub()
         self.testbed.init_user_stub()
+        ndb.get_context().clear_cache()
 
         setCurrentUser(email=Deploy.GAE_ADMIN, user_id='1234', is_admin=True)
         user_id=Fields.sanitize_user_id(users.get_current_user().user_id())
@@ -52,7 +53,6 @@ class DevicesHandlerJsonTest(unittest.TestCase):
         self.assertEqual(self.device.resource, d['resource'])
         self.assertEqual(self.device.type, d['type'])
         self.assertEqual(self.device.user_id, d['user_id'])
-        # FIXME: format times and enable asserts.
         self.assertEqual(str(self.device.created), d['created'])
         self.assertEqual(str(self.device.modified), d['modified'])
         self.assertEqual(self.device.revision, d['revision'])
@@ -79,12 +79,9 @@ class DevicesHandlerJsonTest(unittest.TestCase):
         # POST with no data.
         self.assertRaises(webtest.app.AppError, self.testapp.post, url='/')
 
-    def testDevicesHandlerPut(self):
+    def testDevicesHandlerPut500(self):
         # PUT not implemented.
-        response = self.testapp.put('/')
-        self.assertEqual(response.status_int, 200)
-        self.assertEqual(response.content_type, 'application/json')
-        self.assertFalse(response.body)
+        self.assertRaises(webtest.app.AppError, self.testapp.put, url='/')
 
     def testDevicesHandlerDelete(self):
         response = self.testapp.delete('/')

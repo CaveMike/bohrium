@@ -12,16 +12,6 @@ class GenericParentHandlerJson(RequestHandler):
         self.adapter = adapter
         logging.getLogger().debug('adapter=' + str(type(self.adapter)))
 
-    # List all
-    def get(self, *args, **kwargs):
-        logging.getLogger().debug('get: args: %s, kwargs: %s' % (args, kwargs))
-
-        objs = self.adapter.list_all(self.request, self.request.body)
-        result = json.dumps(obj=objs, cls=NdbJsonEncoder)
-
-        self.response.headers['Content-Type'] = 'application/json'
-        self.response.write(result)
-
     # Create child
     def post(self, *args, **kwargs):
         logging.getLogger().debug('post: args: %s, kwargs: %s' % (args, kwargs))
@@ -30,16 +20,42 @@ class GenericParentHandlerJson(RequestHandler):
             self.abort(400)
 
         obj = self.adapter.create_child(self.request, self.request.body)
+        if not obj:
+            self.abort(500, detail='Create error')
+
         result = json.dumps(obj=obj, cls=NdbJsonEncoder)
+        if not result:
+            self.abort(500, detail='Encoding error')
 
         self.response.headers['Content-Type'] = 'application/json'
         self.response.write(result)
 
-    # Replace all
+    # Read all
+    def get(self, *args, **kwargs):
+        logging.getLogger().debug('get: args: %s, kwargs: %s' % (args, kwargs))
+
+        objs = self.adapter.list_all(self.request, self.request.body)
+        if not objs:
+            self.abort(500, detail='Read error')
+
+        result = json.dumps(obj=objs, cls=NdbJsonEncoder)
+        if not result:
+            self.abort(500, detail='Encoding error')
+
+        self.response.headers['Content-Type'] = 'application/json'
+        self.response.write(result)
+
+    # Update all
     def put(self, *args, **kwargs):
         logging.getLogger().debug('put: args: %s, kwargs: %s' % (args, kwargs))
 
-        result = self.adapter.update_all(self.request, self.request.body)
+        objs = self.adapter.update_all(self.request, self.request.body)
+        if not objs:
+            self.abort(500, detail='Update error')
+
+        result = json.dumps(obj=objs, cls=NdbJsonEncoder)
+        if not result:
+            self.abort(500, detail='Encoding error')
 
         self.response.headers['Content-Type'] = 'application/json'
         self.response.write(result)
@@ -48,10 +64,10 @@ class GenericParentHandlerJson(RequestHandler):
     def delete(self, *args, **kwargs):
         logging.getLogger().debug('delete: args: %s, kwargs: %s' % (args, kwargs))
 
-        result = self.adapter.delete_all(self.request, self.request.body)
+        self.adapter.delete_all(self.request, self.request.body)
 
         self.response.headers['Content-Type'] = 'application/json'
-        self.response.write(result)
+        self.response.write('')
 
 class GenericHandlerJson(RequestHandler):
     def __init__(self, request, response, adapter):
@@ -69,31 +85,43 @@ class GenericHandlerJson(RequestHandler):
             id = request.get(PARAM_KEY_NAME)
             logging.getLogger().debug('from request: id: %s' % (id))
 
-        if id:
-            logging.getLogger().debug('id: %s' % (id))
-            return id
+        if not id:
+            self.abort(500, detail='ID parameter not found.')
 
-        self.abort(501)
-
-    # List one
-    def get(self, *args, **kwargs):
-        logging.getLogger().debug('get: args: %s, kwargs: %s' % (args, kwargs))
-
-        id = self.get_id(kwargs, self.request)
-        obj = self.adapter.list_one(id, self.request, self.request.body)
-        result = json.dumps(obj=obj, cls=NdbJsonEncoder)
-
-        self.response.headers['Content-Type'] = 'application/json'
-        self.response.write(result)
+        logging.getLogger().debug('id: %s' % (id))
+        return id
 
     # Create child
     def post(self, *args, **kwargs):
         logging.getLogger().debug('post: args: %s, kwargs: %s' % (args, kwargs))
 
-        id = self.get_id(kwargs, self.request)
-        result = self.adapter.create_grandchild(id, self.request, self.request.body)
+        if not self.request.body:
+            self.abort(400)
 
-        self.abort(501)
+        id = self.get_id(kwargs, self.request)
+        obj = self.adapter.create_grandchild(id, self.request, self.request.body)
+        if not obj:
+            self.abort(404)
+
+        result = json.dumps(obj=obj, cls=NdbJsonEncoder)
+        if not result:
+            self.abort(500, detail='Encoding error')
+
+        self.response.headers['Content-Type'] = 'application/json'
+        self.response.write(result)
+
+    # Read one
+    def get(self, *args, **kwargs):
+        logging.getLogger().debug('get: args: %s, kwargs: %s' % (args, kwargs))
+
+        id = self.get_id(kwargs, self.request)
+        obj = self.adapter.list_one(id, self.request, self.request.body)
+        if not obj:
+            self.abort(404)
+
+        result = json.dumps(obj=obj, cls=NdbJsonEncoder)
+        if not result:
+            self.abort(500, detail='Encoding error')
 
         self.response.headers['Content-Type'] = 'application/json'
         self.response.write(result)
@@ -104,7 +132,12 @@ class GenericHandlerJson(RequestHandler):
 
         id = self.get_id(kwargs, self.request)
         obj = self.adapter.update_one(id, self.request, self.request.body)
+        if not obj:
+            self.abort(404)
+
         result = json.dumps(obj=obj, cls=NdbJsonEncoder)
+        if not result:
+            self.abort(500, detail='Encoding error')
 
         self.response.headers['Content-Type'] = 'application/json'
         self.response.write(result)
@@ -114,7 +147,13 @@ class GenericHandlerJson(RequestHandler):
         logging.getLogger().debug('delete: args: %s, kwargs: %s' % (args, kwargs))
 
         id = self.get_id(kwargs, self.request)
-        result = self.adapter.delete_one(id, self.request, self.request.body)
+        obj = self.adapter.delete_one(id, self.request, self.request.body)
+        if not obj:
+            self.abort(404)
+
+        result = json.dumps(obj=obj, cls=NdbJsonEncoder)
+        if not result:
+            self.abort(500, detail='Encoding error')
 
         self.response.headers['Content-Type'] = 'application/json'
         self.response.write(result)

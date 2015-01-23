@@ -33,7 +33,7 @@ class Device(ndb.Model):
     reg_id = ndb.StringProperty(required=True, validator=Fields.validate_reg_id)
     resource = ndb.StringProperty(required=False)
     type = ndb.StringProperty(default='ac2dm', required=True)
-    user_id = ndb.StringProperty(required=False, validator=Fields.validate_not_empty)
+    user_id = ndb.StringProperty(required=True, validator=Fields.validate_not_empty)
     created = ndb.DateTimeProperty(auto_now_add=True, required=True)
     modified = ndb.DateTimeProperty(auto_now=True, required=True)
     revision = ndb.IntegerProperty(default=0, required=True)

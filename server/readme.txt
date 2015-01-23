@@ -125,7 +125,9 @@ Testing:
     Example:
       nosetests-2.7 --with-path=./src --with-path=./cfg --with-gae --gae-application=./src/ --without-sandbox -v test/handlers/
     Example (JSON only):
-      nosetests-2.7 --with-path=./src --with-path=./cfg --with-gae --gae-application=./src/ --without-sandbox -v test/handlers/testDeviceHandlerJson.py test/handlers/testDevicesHandlerJson.py
+      nosetests-2.7 --with-path=./src --with-path=./cfg --with-gae --gae-application=./src/ --without-sandbox -v --nocapture test/handlers/testDeviceHandlerJson.py:DeviceHandlerJsonTest
+      nosetests-2.7 --with-path=./src --with-path=./cfg --with-gae --gae-application=./src/ --without-sandbox -v --nocapture test/handlers/testDevicesHandlerJson.py:DevicesHandlerJsonTest
+
 
 Class Diagram:
 
