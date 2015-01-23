@@ -19,7 +19,7 @@ class GenericParentHandlerJson(RequestHandler):
         if not self.request.body:
             self.abort(400)
 
-        obj = self.adapter.create_child(self.request, self.request.body)
+        obj = self.adapter.create(self.request, self.request.body)
         if not obj:
             self.abort(500, detail='Create error')
 
@@ -34,7 +34,7 @@ class GenericParentHandlerJson(RequestHandler):
     def get(self, *args, **kwargs):
         logging.getLogger().debug('get: args: %s, kwargs: %s' % (args, kwargs))
 
-        objs = self.adapter.list_all(self.request, self.request.body)
+        objs = self.adapter.read_all(self.request, self.request.body)
         if not objs:
             self.abort(500, detail='Read error')
 
@@ -99,7 +99,7 @@ class GenericHandlerJson(RequestHandler):
             self.abort(400)
 
         id = self.get_id(kwargs, self.request)
-        obj = self.adapter.create_grandchild(id, self.request, self.request.body)
+        obj = self.adapter.create_child(id, self.request, self.request.body)
         if not obj:
             self.abort(404)
 
@@ -115,7 +115,7 @@ class GenericHandlerJson(RequestHandler):
         logging.getLogger().debug('get: args: %s, kwargs: %s' % (args, kwargs))
 
         id = self.get_id(kwargs, self.request)
-        obj = self.adapter.list_one(id, self.request, self.request.body)
+        obj = self.adapter.read_one(id, self.request, self.request.body)
         if not obj:
             self.abort(404)
 
@@ -168,7 +168,7 @@ class GenericParentHandlerHtml(RequestHandler):
         logging.getLogger().debug('get: args: %s, kwargs: %s' % (args, kwargs))
 
         template_values = self.adapter.parse_template_values(self.request)
-        template_values['results'] = self.adapter.list_all(self.request)
+        template_values['results'] = self.adapter.read_all(self.request)
 
         template = jinja.get_template('html/all.html')
 
@@ -193,7 +193,7 @@ class GenericParentHandlerHtml(RequestHandler):
         if not self.request.body:
             self.abort(400)
 
-        obj = self.adapter.create_child(self.request, body=None)
+        obj = self.adapter.create(self.request, body=None)
         if obj:
             self.redirect(obj.redirect_url())
 
@@ -237,7 +237,7 @@ class GenericHandlerHtml(RequestHandler):
         id = self.get_id(kwargs, self.request)
 
         template_values = self.adapter.parse_template_values(self.request)
-        template_values['result'] = self.adapter.list_one(id, self.request)
+        template_values['result'] = self.adapter.read_one(id, self.request)
 
         template = jinja.get_template('html/one.html')
 

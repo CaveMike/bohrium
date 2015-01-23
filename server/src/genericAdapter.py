@@ -11,7 +11,7 @@ class GenericAdapter(object):
         self.updateIfExists = updateIfExists
 
     # Create
-    def create_child(self, request, body, parent=None):
+    def create(self, request, body, parent=None):
         if not parent:
             parent=self.cls.ROOT_KEY
 
@@ -31,7 +31,7 @@ class GenericAdapter(object):
         obj.put()
         return obj
 
-    def create_grandchild(self, id, request, body=None):
+    def create_child(self, id, request, body=None):
         keys = self.cls.query_by_id(id)
         if not keys:
             logging.getLogger().error('no objects found')
@@ -42,16 +42,16 @@ class GenericAdapter(object):
             return None
 
         key = keys[0]
-        return create_child(request, body, parent=keys)
+        return create(request, body, parent=keys)
 
     # Read
-    def list_all(self, request, body=None, parent=None):
+    def read_all(self, request, body=None, parent=None):
         if not parent:
             parent=self.cls.ROOT_KEY
 
         return self.cls.query(ancestor=parent).order(-self.cls.modified).fetch()
 
-    def list_one(self, id, request, body=None):
+    def read_one(self, id, request, body=None):
         keys = self.cls.query_by_id(id)
         if not keys:
             logging.getLogger().error('no objects found')
@@ -78,7 +78,7 @@ class GenericAdapter(object):
         if not keys:
             if self.createIfMissing:
                 logging.getLogger().error('creating missing object for update')
-                return self.create_child(request, body)
+                return self.create(request, body)
             else:
                 return None
 
