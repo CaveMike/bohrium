@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:title="@string/accounts" />
+    <item android:title="@string/get_devices" />
+    <item android:title="@string/unregister_device" />
+    <item android:title="@string/register_device" />
+    <item android:title="@string/message_device" />
+    <item android:title="@string/get_users" />
+    <item android:title="@string/unregister_user" />
+    <item android:title="@string/register_user" />
+    <item android:title="@string/message_user" />
+    <item android:title="@string/get_publications" />
+    <item android:title="@string/create_publication" />
+    <item android:title="@string/delete_publication" />
+    <item android:title="@string/publish_message" />
+    <item android:title="@string/subscribe" />
+    <item android:title="@string/unsubscribe" />
+    <item android:title="@string/clear" />
+</menu>

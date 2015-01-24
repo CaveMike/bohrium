@@ -1,0 +1,20 @@
+# Specific files to exclude
+
+# Gradle
+.gradle
+/build
+
+# Local configuration files (sdk path, etc)
+local.properties
+gradle.properties
+
+# OS generated files
+.DS_Store
+
+# IntelliJ
+*.iml
+*.ipr
+*.iws
+.idea
+
+app/src/main/res/values/deploy.xml
