@@ -114,8 +114,9 @@ class UMessage(ndb.Model):
         ]
 
 class UMessageAdapter(GenericAdapter):
-    def create_child(self, request, body=None):
-        obj = super(UMessageAdapter, self).create_child(request, body)
+    def create(self, kv, parent=None):
+        logging.getLogger().debug('create: kv: %s, parent: %s' % (kv, parent))
+        obj = super(UMessageAdapter, self).create(kv, parent)
         if obj:
             obj.send()
 

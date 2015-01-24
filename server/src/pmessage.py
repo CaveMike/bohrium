@@ -132,8 +132,9 @@ class PMessage(ndb.Model):
         ]
 
 class PMessageAdapter(GenericAdapter):
-    def create_child(self, request, body=None):
-        obj = super(PMessageAdapter, self).create_child(request, body)
+    def create(self, kv, parent=None):
+        logging.getLogger().debug('create: kv: %s, parent: %s' % (kv, parent))
+        obj = super(PMessageAdapter, self).create(kv, parent)
         if obj:
             obj.send()
 

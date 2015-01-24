@@ -12,6 +12,7 @@ class GenericAdapter(object):
 
     # Create
     def create(self, kv, parent=None):
+        logging.getLogger().debug('create: kv: %s, parent: %s' % (kv, parent))
         if not parent:
             parent=self.cls.ROOT_KEY
 

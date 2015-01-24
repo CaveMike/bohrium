@@ -41,7 +41,7 @@ class Config(ndb.Model):
     def load(obj, kv):
         logging.getLogger().debug('kv=' + str(kv))
 
-        obj.name = Fields.get(kv, 'name', 'default')
+        obj.name = Fields.get(kv, 'name', 'active')
         obj.gcm_api_key = Fields.get(kv, 'gcm_api_key')
         obj.user_id = Fields.sanitize_user_id(users.get_current_user().user_id())
 

@@ -114,8 +114,9 @@ class DMessage(ndb.Model):
         ]
 
 class DMessageAdapter(GenericAdapter):
-    def create_child(self, request, body=None):
-        obj = super(DMessageAdapter, self).create_child(request, body)
+    def create(self, kv, parent=None):
+        logging.getLogger().debug('create: kv: %s, parent: %s' % (kv, parent))
+        obj = super(DMessageAdapter, self).create(kv, parent)
         if obj:
             obj.send()
 
