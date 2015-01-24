@@ -1,6 +1,7 @@
 import logging
 
 from google.appengine.ext import ndb
+from google.appengine.ext.db import BadValueError
 
 class GenericAdapter(object):
     def __init__(self, cls, allowDuplicates=False, createIfMissing=True, updateIfExists=True):
@@ -31,7 +32,7 @@ class GenericAdapter(object):
 
         try:
             obj.put()
-        except Exception: # FIXME: catch BadValueError
+        except BadValueError:
             return None
 
         return obj
@@ -128,4 +129,3 @@ class GenericAdapter(object):
 
         keys[0].delete()
         return obj
-
