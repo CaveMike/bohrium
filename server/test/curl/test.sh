@@ -6,7 +6,7 @@ source ./cfg/include.sh
 
 if [ $USE_LOCAL -eq 1 ]; then
   # Get auth cookie.
-  curl ${CURL_DEBUG_FLAGS} -c ${COOKIE_FILE} "${GAE_URL}/_ah/login?email=${NAME_0}&admin=True&action=Login" -X GET
+  curl ${CURL_DEBUG_FLAGS} -c ${COOKIE_FILE} "${GAE_URL}/_ah/login?email=${GAE_ADMIN}&admin=True&action=Login" -X GET
 else
   # Get auth token.
   DATA="Passwd=$( rawurlencode "${GAE_APP_PASSWORD}" )&source=$( rawurlencode "${GAE_NAME}" )&accountType=$( rawurlencode "${GAE_ACCOUNT_TYPE}" )&Email=$( rawurlencode "${GAE_ADMIN}" )&service=ah"

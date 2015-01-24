@@ -33,8 +33,8 @@ GAE_ACCOUNT_TYPE=$(cat "${PYTHON_DEPLOY}" | perl -ne '/HOSTED_OR_GOOGLE\s*=\s*.(
 GAE_APP_PASSWORD=$(cat "${PYTHON_DEPLOY}" | perl -ne '/GAE_APP_PASSWORD\s*=\s*.(\w+)./ && print "$1\n"')
 GAE_LOCAL_SERVER=$(cat "${PYTHON_DEPLOY}" | perl -ne '/GAE_LOCAL_SERVER\s*=\s*.(.+)./ && print "$1\n"')
 GAE_REMOTE_SERVER="${GAE_NAME}.appspot.com"
-GAE_LOCAL_URL='http://${GAE_LOCAL_SERVER}'
-GAE_REMOTE_URL='http://${GAE_REMOTE_SERVER}'
+GAE_LOCAL_URL="http://${GAE_LOCAL_SERVER}"
+GAE_REMOTE_URL="http://${GAE_REMOTE_SERVER}"
 GCM_API_KEY=$(cat "${PYTHON_DEPLOY}" | perl -ne '/GCM_API_KEY\s*=\s*.(\w+)./ && print "$1\n"')
 
 NAME_0=$(cat "${PYTHON_TEST_DATA}" | perl -ne '/TEST_DEVICE_0\s*=\s*{.name.\s*.\s*.([^'\'']+).,.*/ && print "$1\n"')
