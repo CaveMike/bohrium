@@ -10,6 +10,8 @@ from webapp2 import RequestHandler
 
 from codecHtml import CodecHtml
 from codecJson import CodecJson
+from codecXml import CodecXml
+from codecYaml import CodecYaml
 from contentRoute import ContentRoute
 from fields import Fields
 from genericHandlers import GenericParentHandlerJson
@@ -108,6 +110,50 @@ class Device(ndb.Model):
         ContentRoute(template=child_url, handler=DeviceHandlerHtml,
             #header='Content-Type', header_values=('application/x-www-form-urlencoded',),
             methods=('POST',)),
+
+        # XML (parent)
+        ContentRoute(template=parent_url, handler=DevicesHandlerXml,
+            header='Accept', header_values=('application/xml',),
+            methods=('GET',)),
+        ContentRoute(template=parent_url, handler=DevicesHandlerXml,
+            header='Content-Type', header_values=('application/xml',),
+            methods=('POST', 'PUT')),
+        ContentRoute(template=parent_url, handler=DevicesHandlerXml,
+            header='Content-Type', header_values=('application/xml',),
+            methods=('DELETE')),
+
+        # XML (child)
+        ContentRoute(template=child_url, handler=DeviceHandlerXml,
+            header='Accept', header_values=('application/xml',),
+            methods=('GET',)),
+        ContentRoute(template=child_url, handler=DeviceHandlerXml,
+            header='Content-Type', header_values=('application/xml',),
+            methods=('POST', 'PUT')),
+        ContentRoute(template=child_url, handler=DeviceHandlerXml,
+            header='Content-Type', header_values=('application/xml',),
+            methods=('DELETE')),
+
+        # XML (parent)
+        ContentRoute(template=parent_url, handler=DevicesHandlerYaml,
+            header='Accept', header_values=('application/x-yaml',),
+            methods=('GET',)),
+        ContentRoute(template=parent_url, handler=DevicesHandlerYaml,
+            header='Content-Type', header_values=('application/x-yaml',),
+            methods=('POST', 'PUT')),
+        ContentRoute(template=parent_url, handler=DevicesHandlerYaml,
+            header='Content-Type', header_values=('application/x-yaml',),
+            methods=('DELETE')),
+
+        # XML (child)
+        ContentRoute(template=child_url, handler=DeviceHandlerYaml,
+            header='Accept', header_values=('application/x-yaml',),
+            methods=('GET',)),
+        ContentRoute(template=child_url, handler=DeviceHandlerYaml,
+            header='Content-Type', header_values=('application/x-yaml',),
+            methods=('POST', 'PUT')),
+        ContentRoute(template=child_url, handler=DeviceHandlerYaml,
+            header='Content-Type', header_values=('application/x-yaml',),
+            methods=('DELETE')),
         ]
 
 class DevicesHandlerJson(GenericParentHandlerJson):
@@ -125,3 +171,19 @@ class DevicesHandlerHtml(GenericParentHandlerHtml):
 class DeviceHandlerHtml(GenericHandlerHtml):
     def __init__(self, request, response):
         super(DeviceHandlerHtml, self).__init__(request, response, adapter=GenericAdapter(Device), codec=CodecHtml(Device))
+
+class DevicesHandlerXml(GenericParentHandlerJson):
+    def __init__(self, request, response):
+        super(DevicesHandlerXml, self).__init__(request, response, adapter=GenericAdapter(Device), codec=CodecXml())
+
+class DeviceHandlerXml(GenericHandlerJson):
+    def __init__(self, request, response):
+        super(DeviceHandlerXml, self).__init__(request, response, adapter=GenericAdapter(Device), codec=CodecXml())
+
+class DevicesHandlerYaml(GenericParentHandlerJson):
+    def __init__(self, request, response):
+        super(DevicesHandlerYaml, self).__init__(request, response, adapter=GenericAdapter(Device), codec=CodecYaml())
+
+class DeviceHandlerYaml(GenericHandlerJson):
+    def __init__(self, request, response):
+        super(DeviceHandlerYaml, self).__init__(request, response, adapter=GenericAdapter(Device), codec=CodecYaml())
